@@ -1,0 +1,606 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Định vị giao hàng - FoodDelivery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            color: #333;
+        }
+
+            .nav-btn:hover {
+                background: rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+        .search-container {
+            flex: 1;
+            max-width: 500px;
+            margin: 0 2rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e7ff;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+            .search-input:focus {
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+        .search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+            .search-btn:hover {
+                background: #5a67d8;
+                transform: translateY(-50%) scale(1.05);
+            }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .map-container {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #e2e8f0, #f7fafc);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23cbd5e0" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .location-marker {
+            width: 50px;
+            height: 50px;
+            background: #667eea;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            position: relative;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+            .location-marker::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+                width: 20px;
+                height: 20px;
+                background: white;
+                border-radius: 50%;
+            }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0) rotate(-45deg);
+            }
+
+            40% {
+                transform: translateY(-10px) rotate(-45deg);
+            }
+
+            60% {
+                transform: translateY(-5px) rotate(-45deg);
+            }
+        }
+
+        .delivery-radius {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border: 3px dashed #667eea;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0.3;
+            animation: pulse 3s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.3;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.3;
+            }
+        }
+
+        .address-input-container {
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .address-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            padding-left: 3rem;
+            border: 2px solid #e0e7ff;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+            .address-input:focus {
+                border-color: #667eea;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+                transform: translateY(-2px);
+            }
+
+        .address-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3rem;
+            color: #667eea;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .use-current-location {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+        }
+
+            .use-current-location:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
+            }
+
+        .use-map-location {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+            .use-map-location:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+            }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(0);
+            animation: ripple-animation 0.6s linear;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .location-info {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 600px;
+            margin-top: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+            .location-info.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+            color: #667eea;
+            width: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .search-container {
+                margin: 0 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .map-container {
+                height: 300px;
+            }
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+        }
+
+            .toast.show {
+                transform: translateX(0);
+            }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="goBack()">←</button>
+            <button class="nav-btn" onclick="goHome()">Home</button>
+            <button class="nav-btn" onclick="showMenu()">☰</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Tìm kiếm nhà hàng, món ăn...">
+            <button class="search-btn">🔍</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="map-container">
+            <div class="map-placeholder">
+                <div class="map-overlay"></div>
+                <div class="delivery-radius"></div>
+                <div class="location-marker" onclick="selectMapLocation()"></div>
+            </div>
+        </div>
+
+        <div class="address-input-container">
+            <div class="address-icon">📍</div>
+            <input type="text"
+                   class="address-input"
+                   placeholder="Nhập địa chỉ giao hàng hoặc vị trí"
+                   id="addressInput">
+        </div>
+
+        <div class="button-container">
+            <button class="action-btn use-current-location" onclick="useCurrentLocation()">
+                Sử dụng vị trí hiện tại
+            </button>
+            <button class="action-btn use-map-location" onclick="useMapLocation()">
+                Sử dụng vị trí trên bản đồ
+            </button>
+        </div>
+
+        <div class="location-info" id="locationInfo">
+            <div class="info-item">
+                <span class="info-icon">📍</span>
+                <span>Vị trí: <strong id="currentAddress">Chưa xác định</strong></span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">🚚</span>
+                <span>Phí giao hàng: <strong id="deliveryFee">Miễn phí</strong></span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">⏱️</span>
+                <span>Thời gian giao: <strong id="deliveryTime">20-30 phút</strong></span>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let currentLocation = null;
+
+        function createRipple(event, button) {
+            const ripple = document.createElement('span');
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+
+            ripple.className = 'ripple';
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+
+            button.appendChild(ripple);
+
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show';
+
+            if (type === 'error') {
+                toast.style.background = '#ef4444';
+            } else {
+                toast.style.background = '#10b981';
+            }
+
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+
+        function updateLocationInfo(address, fee = 'Miễn phí', time = '20-30 phút') {
+            document.getElementById('currentAddress').textContent = address;
+            document.getElementById('deliveryFee').textContent = fee;
+            document.getElementById('deliveryTime').textContent = time;
+            document.getElementById('locationInfo').classList.add('show');
+        }
+
+        function useCurrentLocation() {
+            if (!navigator.geolocation) {
+                showToast('Trình duyệt không hỗ trợ định vị GPS', 'error');
+                return;
+            }
+
+            showToast('Đang lấy vị trí hiện tại...', 'info');
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    currentLocation = { lat: latitude, lng: longitude };
+
+                    // Giả lập reverse geocoding
+                    const mockAddress = `${Math.floor(Math.random() * 999) + 1} Đường Lê Duẩn, Phường Thạc Gián, Quận Thanh Khê, Đà Nẵng`;
+                    document.getElementById('addressInput').value = mockAddress;
+
+                    updateLocationInfo(mockAddress, '15.000đ', '25-35 phút');
+                    showToast('Đã xác định vị trí hiện tại thành công!');
+
+                    // Animate marker
+                    const marker = document.querySelector('.location-marker');
+                    marker.style.transform = 'rotate(-45deg) scale(1.2)';
+                    setTimeout(() => {
+                        marker.style.transform = 'rotate(-45deg) scale(1)';
+                    }, 300);
+                },
+                (error) => {
+                    let message = 'Không thể lấy vị trí hiện tại';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            message = 'Vui lòng cho phép truy cập vị trí';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message = 'Thông tin vị trí không khả dụng';
+                            break;
+                        case error.TIMEOUT:
+                            message = 'Yêu cầu vị trí hết thời gian chờ';
+                            break;
+                    }
+                    showToast(message, 'error');
+                }
+            );
+        }
+
+        function useMapLocation() {
+            const mockAddress = 'Trung tâm thành phố Đà Nẵng, Việt Nam';
+            document.getElementById('addressInput').value = mockAddress;
+            updateLocationInfo(mockAddress, 'Miễn phí', '15-25 phút');
+            showToast('Đã chọn vị trí trên bản đồ!');
+
+            // Animate marker
+            const marker = document.querySelector('.location-marker');
+            marker.style.transform = 'rotate(-45deg) scale(1.2)';
+            setTimeout(() => {
+                marker.style.transform = 'rotate(-45deg) scale(1)';
+            }, 300);
+        }
+
+        function selectMapLocation() {
+            useMapLocation();
+        }
+
+        function goBack() {
+            showToast('Quay lại trang trước');
+        }
+
+        function goHome() {
+            showToast('Về trang chủ');
+        }
+
+        function showMenu() {
+            showToast('Mở menu');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add ripple effect to buttons
+            document.querySelectorAll('.action-btn').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    createRipple(e, this);
+                });
+            });
+
+            // Address input handler
+            const addressInput = document.getElementById('addressInput');
+            addressInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const address = this.value.trim();
+                    if (address) {
+                        updateLocationInfo(address, '20.000đ', '30-40 phút');
+                        showToast('Đã cập nhật địa chỉ giao hàng!');
+                    }
+                }
+            });
+
+            // Search functionality
+            const searchInput = document.querySelector('.search-input');
+            const searchBtn = document.querySelector('.search-btn');
+
+            searchBtn.addEventListener('click', function() {
+                const query = searchInput.value.trim();
+                if (query) {
+                    showToast(`Tìm kiếm: ${query}`);
+                }
+            });
+
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const query = this.value.trim();
+                    if (query) {
+                        showToast(`Tìm kiếm: ${query}`);
+                    }
+                }
+            });
+        });
+
+        // Animate elements on load
+        setTimeout(() => {
+            document.querySelector('.map-container').style.transform = 'translateY(0)';
+            document.querySelector('.map-container').style.opacity = '1';
+        }, 100);
+    </script>
+</body>
+</html>
