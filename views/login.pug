@@ -1,0 +1,83 @@
+extends layout
+
+block content
+  .login-container
+    .login-card
+      .login-header
+        h1
+          i.fas.fa-sign-in-alt
+          |  Đăng nhập
+        p Chào mừng bạn quay trở lại!
+      
+      .login-body
+        if error
+          .alert.alert-danger
+            i.fas.fa-exclamation-circle
+            |  #{error}
+        
+        form(action="/login", method="POST")
+          .form-group
+            label.form-label(for="username")
+              i.fas.fa-user
+              |  Tên đăng nhập
+            input.form-control(
+              type="text", 
+              id="username", 
+              name="username", 
+              required,
+              placeholder="Nhập tên đăng nhập"
+            )
+          
+          .form-group
+            label.form-label(for="password")
+              i.fas.fa-lock
+              |  Mật khẩu
+            input.form-control(
+              type="password", 
+              id="password", 
+              name="password", 
+              required,
+              placeholder="Nhập mật khẩu"
+            )
+          
+          .form-group
+            button.btn.btn-primary.btn-block(type="submit")
+              i.fas.fa-sign-in-alt
+              |  Đăng nhập
+        
+        .login-footer
+          p.text-center
+            | Chưa có tài khoản? 
+            a(href="/register") Đăng ký ngay
+          
+          .demo-accounts
+            h4 Tài khoản demo:
+            .demo-account
+              strong Admin: 
+              | admin / admin123
+            .demo-account
+              strong User: 
+              | user1 / user123
+
+block scripts
+  script.
+    // Auto-fill demo accounts
+    document.addEventListener('DOMContentLoaded', function() {
+      const demoButtons = document.createElement('div');
+      demoButtons.innerHTML = `
+        <div style="margin-top: 1rem; text-align: center;">
+          <button type="button" class="btn btn-sm btn-secondary" onclick="fillDemo('admin', 'admin123')">
+            Đăng nhập Admin
+          </button>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="fillDemo('user1', 'user123')">
+            Đăng nhập User
+          </button>
+        </div>
+      `;
+      document.querySelector('.login-body').appendChild(demoButtons);
+    });
+    
+    function fillDemo(username, password) {
+      document.getElementById('username').value = username;
+      document.getElementById('password').value = password;
+    }

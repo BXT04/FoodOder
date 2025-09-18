@@ -1,0 +1,243 @@
+extends ../layout
+
+block content
+  .admin-header
+    .container
+      h1
+        i.fas.fa-tachometer-alt
+        |  Admin Dashboard
+      p Quản lý hệ thống đặt món ăn online
+  
+  .container
+    // Admin Navigation
+    .admin-nav
+      ul
+        li
+          a.active(href="/admin")
+            i.fas.fa-tachometer-alt
+            |  Dashboard
+        li
+          a(href="/admin/foods")
+            i.fas.fa-utensils
+            |  Quản lý món ăn
+        li
+          a(href="/admin/orders")
+            i.fas.fa-shopping-cart
+            |  Quản lý đơn hàng
+        li
+          a(href="/admin/users")
+            i.fas.fa-users
+            |  Quản lý người dùng
+    
+    // Statistics Cards
+    .stats-grid
+      .stat-card.primary
+        .stat-icon
+          i.fas.fa-shopping-cart
+        .stat-number= stats.totalOrders
+        .stat-label Tổng đơn hàng
+      
+      .stat-card.success
+        .stat-icon
+          i.fas.fa-dollar-sign
+        .stat-number= stats.totalRevenue.toLocaleString('vi-VN') + ' VNĐ'
+        .stat-label Doanh thu
+      
+      .stat-card.warning
+        .stat-icon
+          i.fas.fa-clock
+        .stat-number= stats.pendingOrders
+        .stat-label Đơn chờ xử lý
+      
+      .stat-card.danger
+        .stat-icon
+          i.fas.fa-check-circle
+        .stat-number= stats.completedOrders
+        .stat-label Đơn hoàn thành
+    
+    // Recent Orders and Quick Actions
+    .dashboard-content
+      .row
+        .col-md-8
+          .card
+            .card-header
+              h3
+                i.fas.fa-list
+                |  Đơn hàng gần đây
+            .card-body
+              if recentOrders.length > 0
+                .table-container
+                  table.table
+                    thead
+                      tr
+                        th ID
+                        th Ngày
+                        th Tổng tiền
+                        th Trạng thái
+                        th Thao tác
+                    tbody
+                      each order in recentOrders
+                        tr
+                          td= order.id
+                          td= order.date
+                          td= order.total.toLocaleString('vi-VN') + ' VNĐ'
+                          td
+                            span.status-badge(class=`status-${order.status}`)
+                              = order.status === 'pending' ? 'Chờ xử lý' : 'Hoàn thành'
+                          td
+                            button.btn.btn-sm.btn-primary.status-btn(
+                              data-order-id=order.id,
+                              data-status=order.status === 'pending' ? 'completed' : 'pending'
+                            )
+                              = order.status === 'pending' ? 'Hoàn thành' : 'Chờ xử lý'
+              else
+                .empty-state
+                  i.fas.fa-shopping-cart
+                  p Chưa có đơn hàng nào
+        
+        .col-md-4
+          .card
+            .card-header
+              h3
+                i.fas.fa-chart-pie
+                |  Thống kê nhanh
+            .card-body
+              .quick-stats
+                .quick-stat
+                  .stat-label Tổng món ăn
+                  .stat-value= foods.length
+                .quick-stat
+                  .stat-label Đơn hàng hôm nay
+                  .stat-value= recentOrders.filter(order => order.date === new Date().toISOString().split('T')[0]).length
+                .quick-stat
+                  .stat-label Tỷ lệ hoàn thành
+                  .stat-value= stats.totalOrders > 0 ? Math.round((stats.completedOrders / stats.totalOrders) * 100) + '%' : '0%'
+          
+          .card
+            .card-header
+              h3
+                i.fas.fa-bolt
+                |  Thao tác nhanh
+            .card-body
+              .quick-actions
+                a.btn.btn-primary.btn-block(href="/admin/foods")
+                  i.fas.fa-plus
+                  |  Thêm món ăn mới
+                a.btn.btn-secondary.btn-block(href="/admin/orders")
+                  i.fas.fa-list
+                  |  Xem tất cả đơn hàng
+                a.btn.btn-success.btn-block(href="/admin/reports")
+                  i.fas.fa-chart-bar
+                  |  Báo cáo doanh thu
+                a.btn.btn-warning.btn-block(href="/admin/settings")
+                  i.fas.fa-cog
+                  |  Cài đặt hệ thống
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      // Status update functionality
+      document.querySelectorAll('.status-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const orderId = this.dataset.orderId;
+          const newStatus = this.dataset.status;
+          const statusText = newStatus === 'pending' ? 'Chờ xử lý' : 'Hoàn thành';
+          
+          if (confirm(`Bạn có chắc muốn cập nhật trạng thái đơn hàng #${orderId} thành "${statusText}"?`)) {
+            // Show loading state
+            const originalText = this.textContent;
+            this.textContent = 'Đang cập nhật...';
+            this.disabled = true;
+            
+            // Simulate API call
+            setTimeout(() => {
+              // Update button
+              this.textContent = newStatus === 'pending' ? 'Hoàn thành' : 'Chờ xử lý';
+              this.dataset.status = newStatus === 'pending' ? 'completed' : 'pending';
+              this.disabled = false;
+              
+              // Update status badge
+              const statusBadge = this.closest('tr').querySelector('.status-badge');
+              statusBadge.className = `status-badge status-${newStatus}`;
+              statusBadge.textContent = statusText;
+              
+              // Show success message
+              showNotification(`Đã cập nhật trạng thái đơn hàng #${orderId}`, 'success');
+              
+              // Update stats
+              updateStats();
+            }, 1000);
+          }
+        });
+      });
+      
+      // Auto refresh stats every 30 seconds
+      setInterval(updateStats, 30000);
+    });
+    
+    function updateStats() {
+      // In a real application, this would fetch updated stats from the server
+      console.log('Updating stats...');
+    }
+    
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      
+      // Add notification styles if not exists
+      if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+          .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+          }
+          .notification-success {
+            border-left: 4px solid #28a745;
+            color: #155724;
+          }
+          .notification button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.7;
+            margin-left: 0.5rem;
+          }
+          .notification button:hover {
+            opacity: 1;
+          }
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(notification);
+      
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 3000);
+    }

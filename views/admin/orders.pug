@@ -1,0 +1,458 @@
+extends ../layout
+
+block content
+  .admin-header
+    .container
+      h1
+        i.fas.fa-shopping-cart
+        |  Quản lý đơn hàng
+      p Theo dõi và xử lý các đơn hàng của khách hàng
+  
+  .container
+    // Admin Navigation
+    .admin-nav
+      ul
+        li
+          a(href="/admin")
+            i.fas.fa-tachometer-alt
+            |  Dashboard
+        li
+          a(href="/admin/foods")
+            i.fas.fa-utensils
+            |  Quản lý món ăn
+        li
+          a.active(href="/admin/orders")
+            i.fas.fa-shopping-cart
+            |  Quản lý đơn hàng
+        li
+          a(href="/admin/users")
+            i.fas.fa-users
+            |  Quản lý người dùng
+    
+    // Filters
+    .filters-section
+      .row
+        .col-md-3
+          select.form-control#statusFilter
+            option(value="") Tất cả trạng thái
+            option(value="pending") Chờ xử lý
+            option(value="completed") Hoàn thành
+            option(value="cancelled") Đã hủy
+        .col-md-3
+          input.form-control#dateFilter(type="date")
+        .col-md-3
+          input.form-control#searchInput(type="text", placeholder="Tìm kiếm theo ID...")
+        .col-md-3
+          button.btn.btn-primary#exportBtn
+            i.fas.fa-download
+            |  Xuất báo cáo
+    
+    // Orders Table
+    .card
+      .card-header
+        h3
+          i.fas.fa-list
+          |  Danh sách đơn hàng
+        .header-actions
+          span.badge.badge-primary#totalOrders= orders.length + ' đơn hàng'
+      .card-body
+        if orders.length > 0
+          .table-container
+            table.table#ordersTable
+              thead
+                tr
+                  th ID
+                  th Ngày
+                  th Khách hàng
+                  th Món ăn
+                  th Tổng tiền
+                  th Trạng thái
+                  th Thao tác
+              tbody
+                each order in orders
+                  tr(data-order-id=order.id, data-status=order.status, data-date=order.date)
+                    td= order.id
+                    td= order.date
+                    td User ##{order.userId}
+                    td
+                      .order-items
+                        each item in order.items
+                          .order-item
+                            span.item-name= getFoodName(item.foodId)
+                            span.item-quantity x#{item.quantity}
+                    td= order.total.toLocaleString('vi-VN') + ' VNĐ'
+                    td
+                      span.status-badge(class=`status-${order.status}`)
+                        = order.status === 'pending' ? 'Chờ xử lý' : order.status === 'completed' ? 'Hoàn thành' : 'Đã hủy'
+                    td
+                      .action-buttons
+                        if order.status === 'pending'
+                          button.btn.btn-sm.btn-success.status-btn(
+                            data-order-id=order.id,
+                            data-status='completed'
+                          )
+                            i.fas.fa-check
+                            |  Hoàn thành
+                          button.btn.btn-sm.btn-danger.status-btn(
+                            data-order-id=order.id,
+                            data-status='cancelled'
+                          )
+                            i.fas.fa-times
+                            |  Hủy
+                        else if order.status === 'completed'
+                          button.btn.btn-sm.btn-secondary.status-btn(
+                            data-order-id=order.id,
+                            data-status='pending'
+                          )
+                            i.fas.fa-undo
+                            |  Quay lại
+                        else
+                          button.btn.btn-sm.btn-primary.status-btn(
+                            data-order-id=order.id,
+                            data-status='pending'
+                          )
+                            i.fas.fa-redo
+                            |  Khôi phục
+                        button.btn.btn-sm.btn-info.view-details(
+                          data-order-id=order.id
+                        )
+                          i.fas.fa-eye
+        else
+          .empty-state
+            i.fas.fa-shopping-cart
+            p Chưa có đơn hàng nào
+
+    // Order Details Modal
+    .modal#orderDetailsModal
+      .modal-content
+        .modal-header
+          h3
+            i.fas.fa-eye
+            |  Chi tiết đơn hàng
+          button.modal-close &times;
+        .modal-body#orderDetailsContent
+          // Content will be loaded dynamically
+        .modal-footer
+          button.btn.btn-secondary(data-dismiss="modal") Đóng
+
+block scripts
+  script.
+    // Mock food data for display
+    const foods = !{JSON.stringify(foods)};
+    
+    function getFoodName(foodId) {
+      const food = foods.find(f => f.id === foodId);
+      return food ? food.name : 'Món không xác định';
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      // Modal functionality
+      const modal = document.getElementById('orderDetailsModal');
+      const modalCloses = document.querySelectorAll('.modal-close, [data-dismiss="modal"]');
+      
+      // Close modal
+      modalCloses.forEach(close => {
+        close.addEventListener('click', function() {
+          modal.style.display = 'none';
+        });
+      });
+      
+      // Close modal when clicking outside
+      window.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+      
+      // View order details
+      document.querySelectorAll('.view-details').forEach(button => {
+        button.addEventListener('click', function() {
+          const orderId = this.dataset.orderId;
+          showOrderDetails(orderId);
+        });
+      });
+      
+      // Status update buttons
+      document.querySelectorAll('.status-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const orderId = this.dataset.orderId;
+          const newStatus = this.dataset.status;
+          const statusText = getStatusText(newStatus);
+          
+          if (confirm(`Bạn có chắc muốn cập nhật trạng thái đơn hàng #${orderId} thành "${statusText}"?`)) {
+            updateOrderStatus(orderId, newStatus, this);
+          }
+        });
+      });
+      
+      // Filters
+      document.getElementById('statusFilter').addEventListener('change', filterOrders);
+      document.getElementById('dateFilter').addEventListener('change', filterOrders);
+      document.getElementById('searchInput').addEventListener('input', filterOrders);
+      
+      // Export button
+      document.getElementById('exportBtn').addEventListener('click', exportOrders);
+    });
+    
+    function showOrderDetails(orderId) {
+      // Find order data
+      const orderRow = document.querySelector(`tr[data-order-id="${orderId}"]`);
+      const orderData = {
+        id: orderId,
+        date: orderRow.dataset.date,
+        status: orderRow.dataset.status,
+        userId: orderRow.cells[2].textContent,
+        total: orderRow.cells[4].textContent,
+        items: []
+      };
+      
+      // Get order items
+      const itemElements = orderRow.querySelectorAll('.order-item');
+      itemElements.forEach(item => {
+        const name = item.querySelector('.item-name').textContent;
+        const quantity = item.querySelector('.item-quantity').textContent.replace('x', '');
+        orderData.items.push({ name, quantity });
+      });
+      
+      // Populate modal content
+      const content = document.getElementById('orderDetailsContent');
+      content.innerHTML = `
+        <div class="order-details">
+          <div class="detail-row">
+            <strong>Mã đơn hàng:</strong> #${orderData.id}
+          </div>
+          <div class="detail-row">
+            <strong>Ngày đặt:</strong> ${orderData.date}
+          </div>
+          <div class="detail-row">
+            <strong>Khách hàng:</strong> ${orderData.userId}
+          </div>
+          <div class="detail-row">
+            <strong>Trạng thái:</strong> 
+            <span class="status-badge status-${orderData.status}">
+              ${getStatusText(orderData.status)}
+            </span>
+          </div>
+          <div class="detail-row">
+            <strong>Món ăn:</strong>
+            <ul class="order-items-list">
+              ${orderData.items.map(item => `
+                <li>${item.name} x ${item.quantity}</li>
+              `).join('')}
+            </ul>
+          </div>
+          <div class="detail-row">
+            <strong>Tổng tiền:</strong> ${orderData.total}
+          </div>
+        </div>
+      `;
+      
+      // Show modal
+      document.getElementById('orderDetailsModal').style.display = 'block';
+    }
+    
+    function updateOrderStatus(orderId, newStatus, button) {
+      // Show loading state
+      const originalText = button.innerHTML;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      button.disabled = true;
+      
+      // Simulate API call
+      setTimeout(() => {
+        // Update status badge
+        const row = button.closest('tr');
+        const statusBadge = row.querySelector('.status-badge');
+        statusBadge.className = `status-badge status-${newStatus}`;
+        statusBadge.textContent = getStatusText(newStatus);
+        
+        // Update row data
+        row.dataset.status = newStatus;
+        
+        // Update action buttons
+        updateActionButtons(row, newStatus);
+        
+        // Reset button
+        button.innerHTML = originalText;
+        button.disabled = false;
+        
+        // Show success message
+        showNotification(`Đã cập nhật trạng thái đơn hàng #${orderId}`, 'success');
+      }, 1000);
+    }
+    
+    function updateActionButtons(row, status) {
+      const actionsCell = row.cells[6];
+      const orderId = row.dataset.orderId;
+      
+      let buttonsHTML = '';
+      
+      if (status === 'pending') {
+        buttonsHTML = `
+          <button class="btn btn-sm btn-success status-btn" data-order-id="${orderId}" data-status="completed">
+            <i class="fas fa-check"></i> Hoàn thành
+          </button>
+          <button class="btn btn-sm btn-danger status-btn" data-order-id="${orderId}" data-status="cancelled">
+            <i class="fas fa-times"></i> Hủy
+          </button>
+        `;
+      } else if (status === 'completed') {
+        buttonsHTML = `
+          <button class="btn btn-sm btn-secondary status-btn" data-order-id="${orderId}" data-status="pending">
+            <i class="fas fa-undo"></i> Quay lại
+          </button>
+        `;
+      } else {
+        buttonsHTML = `
+          <button class="btn btn-sm btn-primary status-btn" data-order-id="${orderId}" data-status="pending">
+            <i class="fas fa-redo"></i> Khôi phục
+          </button>
+        `;
+      }
+      
+      buttonsHTML += `
+        <button class="btn btn-sm btn-info view-details" data-order-id="${orderId}">
+          <i class="fas fa-eye"></i>
+        </button>
+      `;
+      
+      actionsCell.innerHTML = buttonsHTML;
+      
+      // Re-attach event listeners
+      attachEventListeners(actionsCell);
+    }
+    
+    function attachEventListeners(container) {
+      // Status buttons
+      container.querySelectorAll('.status-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const orderId = this.dataset.orderId;
+          const newStatus = this.dataset.status;
+          const statusText = getStatusText(newStatus);
+          
+          if (confirm(`Bạn có chắc muốn cập nhật trạng thái đơn hàng #${orderId} thành "${statusText}"?`)) {
+            updateOrderStatus(orderId, newStatus, this);
+          }
+        });
+      });
+      
+      // View details button
+      container.querySelectorAll('.view-details').forEach(button => {
+        button.addEventListener('click', function() {
+          const orderId = this.dataset.orderId;
+          showOrderDetails(orderId);
+        });
+      });
+    }
+    
+    function filterOrders() {
+      const statusFilter = document.getElementById('statusFilter').value;
+      const dateFilter = document.getElementById('dateFilter').value;
+      const searchInput = document.getElementById('searchInput').value.toLowerCase();
+      
+      const rows = document.querySelectorAll('#ordersTable tbody tr');
+      let visibleCount = 0;
+      
+      rows.forEach(row => {
+        const orderId = row.dataset.orderId;
+        const status = row.dataset.status;
+        const date = row.dataset.date;
+        
+        const matchesStatus = !statusFilter || status === statusFilter;
+        const matchesDate = !dateFilter || date === dateFilter;
+        const matchesSearch = !searchInput || orderId.includes(searchInput);
+        
+        if (matchesStatus && matchesDate && matchesSearch) {
+          row.style.display = '';
+          visibleCount++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+      
+      // Update total count
+      document.getElementById('totalOrders').textContent = `${visibleCount} đơn hàng`;
+    }
+    
+    function exportOrders() {
+      // Simulate export functionality
+      showNotification('Đang xuất báo cáo...', 'info');
+      
+      setTimeout(() => {
+        showNotification('Đã xuất báo cáo thành công!', 'success');
+      }, 2000);
+    }
+    
+    function getStatusText(status) {
+      const statusTexts = {
+        pending: 'Chờ xử lý',
+        completed: 'Hoàn thành',
+        cancelled: 'Đã hủy'
+      };
+      return statusTexts[status] || status;
+    }
+    
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      
+      // Add notification styles if not exists
+      if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+          .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+          }
+          .notification-success {
+            border-left: 4px solid #28a745;
+            color: #155724;
+          }
+          .notification-info {
+            border-left: 4px solid #17a2b8;
+            color: #0c5460;
+          }
+          .notification button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.7;
+            margin-left: 0.5rem;
+          }
+          .notification button:hover {
+            opacity: 1;
+          }
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(notification);
+      
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 3000);
+    }

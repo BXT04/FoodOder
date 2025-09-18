@@ -1,0 +1,193 @@
+extends layout
+
+block content
+  // Hero Section
+  .hero-section
+    .container
+      h1 Chào mừng đến với nhà hàng của chúng tôi
+      p Khám phá những món ăn ngon nhất với giá cả hợp lý và dịch vụ tận tình
+  
+  .container
+    // Search and Filter Section
+    .search-section
+      .row
+        .col-md-8
+          .search-box
+            input.form-control.search-input(
+              type="text", 
+              placeholder="Tìm kiếm món ăn...",
+              id="searchInput"
+            )
+            i.fas.fa-search.search-icon
+        .col-md-4
+          select.form-control#categoryFilter
+            option(value="") Tất cả danh mục
+            option(value="Món chính") Món chính
+            option(value="Đồ ăn nhanh") Đồ ăn nhanh
+            option(value="Tráng miệng") Tráng miệng
+            option(value="Đồ uống") Đồ uống
+    
+    // Food Grid
+    .food-grid#foodGrid
+      each food in foods
+        .food-card.fade-in
+          .food-image
+            i.fas.fa-utensils
+          .food-info
+            h3.food-name= food.name
+            p.food-category= food.category
+            p.food-price= food.price.toLocaleString('vi-VN') + ' VNĐ'
+            .food-actions
+              .quantity-controls
+                button.quantity-btn.quantity-minus(type="button")
+                  i.fas.fa-minus
+                input.quantity-input(type="number", value="1", min="1", max="10")
+                button.quantity-btn.quantity-plus(type="button")
+                  i.fas.fa-plus
+              button.btn.btn-primary.add-to-cart(data-food-id=food.id)
+                i.fas.fa-shopping-cart
+                |  Thêm vào giỏ
+    
+    // Empty state
+    .empty-state#emptyState(style="display: none;")
+      .empty-icon
+        i.fas.fa-search
+      h3 Không tìm thấy món ăn nào
+      p Thử tìm kiếm với từ khóa khác hoặc chọn danh mục khác
+
+block scripts
+  script.
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchInput = document.getElementById('searchInput');
+      const categoryFilter = document.getElementById('categoryFilter');
+      const foodGrid = document.getElementById('foodGrid');
+      const emptyState = document.getElementById('emptyState');
+      const foodCards = document.querySelectorAll('.food-card');
+      
+      function filterFoods() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedCategory = categoryFilter.value;
+        let visibleCount = 0;
+        
+        foodCards.forEach(card => {
+          const foodName = card.querySelector('.food-name').textContent.toLowerCase();
+          const foodCategory = card.querySelector('.food-category').textContent;
+          
+          const matchesSearch = foodName.includes(searchTerm);
+          const matchesCategory = !selectedCategory || foodCategory === selectedCategory;
+          
+          if (matchesSearch && matchesCategory) {
+            card.style.display = 'block';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+        
+        // Show/hide empty state
+        if (visibleCount === 0) {
+          foodGrid.style.display = 'none';
+          emptyState.style.display = 'block';
+        } else {
+          foodGrid.style.display = 'grid';
+          emptyState.style.display = 'none';
+        }
+      }
+      
+      // Event listeners
+      searchInput.addEventListener('input', filterFoods);
+      categoryFilter.addEventListener('change', filterFoods);
+      
+      // Add to cart functionality
+      document.querySelectorAll('.add-to-cart').forEach(button => {
+        button.addEventListener('click', function() {
+          const foodId = this.dataset.foodId;
+          const quantity = this.closest('.food-actions').querySelector('.quantity-input').value;
+          const foodName = this.closest('.food-card').querySelector('.food-name').textContent;
+          
+          if (quantity > 0) {
+            // Show success message
+            showNotification(`Đã thêm ${quantity} ${foodName} vào giỏ hàng!`, 'success');
+            
+            // Reset quantity
+            this.closest('.food-actions').querySelector('.quantity-input').value = 1;
+          }
+        });
+      });
+      
+      // Quantity controls
+      document.querySelectorAll('.quantity-btn').forEach(button => {
+        button.addEventListener('click', function() {
+          const input = this.parentElement.querySelector('.quantity-input');
+          const currentValue = parseInt(input.value) || 0;
+          
+          if (this.classList.contains('quantity-plus')) {
+            input.value = currentValue + 1;
+          } else if (this.classList.contains('quantity-minus') && currentValue > 1) {
+            input.value = currentValue - 1;
+          }
+        });
+      });
+    });
+    
+    function showNotification(message, type = 'info') {
+      const notification = document.createElement('div');
+      notification.className = `notification notification-${type}`;
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">
+          <i class="fas fa-times"></i>
+        </button>
+      `;
+      
+      // Add notification styles
+      if (!document.querySelector('#notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'notification-styles';
+        style.textContent = `
+          .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+          }
+          .notification-success {
+            border-left: 4px solid #28a745;
+            color: #155724;
+          }
+          .notification button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            opacity: 0.7;
+            margin-left: 0.5rem;
+          }
+          .notification button:hover {
+            opacity: 1;
+          }
+          @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      document.body.appendChild(notification);
+      
+      // Auto remove after 3 seconds
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.remove();
+        }
+      }, 3000);
+    }
