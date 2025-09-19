@@ -2,7 +2,7 @@
 Đề tài làm website bán đồ ăn trực tuyến
 
 # Nội dung
-- Giới thiệu: website đặt đồ ăn trực tuyến cho người dụng,
+- Giới thiệu: website đặt đồ ăn trực tuyến cho người sử dụng
 - Tính năng chính:
   + Đăng nhập
   + Đăng ký
