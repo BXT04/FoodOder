@@ -10,6 +10,7 @@ Dự án được phát triển bằng **ASP.NET Web Forms (C#)** và **MySQL**.
   + 💵Thanh toán món ăn
   + 📍 Định vị giao hàng
   + 📦 Quản lý đơn hàng
+  + 🥪 Quán lý món ăn
 
 ## 🛠️ Công nghệ sử dụng
 - **Ngôn ngữ**: C#, ASP.NET Web Forms  
