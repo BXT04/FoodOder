@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quản lý món ăn</title>
+<style>
+  :root{
+    --primary:#2E90FF;
+    --sidebar:#FFA500;
+    --bg:#F7F7F7;
+    --border:#E6E6E6;
+    --text:#222;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    font:14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color:var(--text);
+    background:var(--bg);
+  }
+
+  /* Layout */
+  .app{
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    min-height:100dvh;
+  }
+  .sidebar{
+    background:var(--sidebar);
+    padding:12px;
+  }
+  .brand-placeholder{
+    height:14px;width:120px;background:#ffe9c4;border-radius:3px;margin:8px 0 20px;
+  }
+  .menu a{
+    display:block;color:#fff;text-decoration:none;padding:6px 2px;border-radius:4px;
+  }
+  .menu a:hover{background:rgba(255,255,255,.15)}
+  .menu a.active{font-weight:600}
+
+  .main{
+    padding:12px;
+  }
+  .panel{
+    background:#fff;border:2px solid var(--primary);
+    border-radius:6px; padding:16px; min-height:560px;
+  }
+
+  /* Header */
+  .top{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .title{font-size:20px;font-weight:800;margin:0}
+  .btn{
+    background:var(--primary); color:#fff; border:1px solid var(--primary);
+    padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:600;
+  }
+  .btn:active{transform:translateY(1px)}
+
+  /* Table */
+  .table{width:100%; border-collapse:collapse; margin-top:16px}
+  .table th, .table td{
+    border:1px solid var(--border); padding:10px; vertical-align:top; background:#fff;
+  }
+  .table th{background:#f3f3f3; text-align:left; font-weight:700}
+  .col-id{width:70px}
+  .col-name{width:170px}
+  .col-img{width:140px}
+  .col-price{width:110px}
+  .col-cat{width:110px}
+  .col-status{width:90px}
+  .col-action{width:110px}
+
+  .thumb{
+    width:120px;height:64px;object-fit:cover;border-radius:4px;display:block;
+  }
+
+  /* Status color */
+  .status{font-weight:700}
+  .status.ok{color:green}
+  .status.out{color:#e02222}
+
+  /* Action links */
+  .action a{
+    color:var(--primary); text-decoration:underline; margin-right:12px; cursor:pointer;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px){
+    .app{grid-template-columns: 1fr}
+    .sidebar{display:none}
+    .panel{border-width:1.5px}
+    .col-img{width:120px}
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand-placeholder"></div>
+      <nav class="menu">
+        <a href="#" class="active">Quản lý món ăn</a>
+        <a href="#">Quản lý tin tức</a>
+        <a href="#">Quản lý giới thiệu</a>
+        <a href="#">Thông tin nhà hàng</a>
+        <a href="#">Quản lý đơn đặt</a>
+      </nav>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <section class="panel">
+        <div class="top">
+          <h1 class="title">QUẢN LÝ MÓN ĂN</h1>
+          <button class="btn" onclick="alert('Demo: Thêm mới')">+ Thêm mới</button>
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th class="col-id">Mã món</th>
+              <th class="col-name">Tên món</th>
+              <th class="col-img">Hình ảnh</th>
+              <th>Mô tả</th>
+              <th class="col-price">Giá</th>
+              <th class="col-cat">Danh mục</th>
+              <th class="col-status">Trạng thái</th>
+              <th class="col-action">Chức năng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1</td>
+              <td>Gà nướng</td>
+              <td>
+                <img class="thumb" src="https://images.unsplash.com/photo-1562967914-608f82629710?q=80&w=800&auto=format&fit=crop" alt="Gà nướng">
+              </td>
+              <td>Gà nướng than hồng, da giòn vàng ruộm, thịt mềm ngọt, tẩm ướp gia vị truyền thống.</td>
+              <td>250,000 VND</td>
+              <td>Món chính</td>
+              <td><span class="status ok">Còn hàng</span></td>
+              <td class="action"><a onclick="alert('Demo: Sửa #1')">Sửa</a><a onclick="alert('Demo: Xóa #1')">Xóa</a></td>
+            </tr>
+            <tr>
+              <td>2</td>
+              <td>Gỏi tai heo</td>
+              <td>
+                <img class="thumb" src="https://upload.wikimedia.org/wikipedia/commons/9/94/Vietnamese_salad_goi.jpg" alt="Gỏi tai heo">
+              </td>
+              <td>Gỏi tai heo giòn sần sật, kết hợp cùng rau thơm, cà rốt, dưa leo và sốt chua ngọt cay nồng.</td>
+              <td>120,000 VND</td>
+              <td>Khai vị</td>
+              <td><span class="status out">Hết hàng</span></td>
+              <td class="action"><a onclick="alert('Demo: Sửa #2')">Sửa</a><a onclick="alert('Demo: Xóa #2')">Xóa</a></td>
+            </tr>
+            <tr>
+              <td>3</td>
+              <td>Trà sữa trân châu</td>
+              <td>
+                <img class="thumb" src="https://images.unsplash.com/photo-1585238342028-4bbc0a4d8fd8?q=80&w=800&auto=format&fit=crop" alt="Trà sữa">
+              </td>
+              <td>Trà sữa vị đậm, ngọt vừa, kết hợp cùng trân châu đen dẻo dai, thích hợp giải khát.</td>
+              <td>45,000 VND</td>
+              <td>Đồ uống</td>
+              <td><span class="status ok">Còn hàng</span></td>
+              <td class="action"><a onclick="alert('Demo: Sửa #3')">Sửa</a><a onclick="alert('Demo: Xóa #3')">Xóa</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
