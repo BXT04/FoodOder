@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Giỏ hàng</title>
+  <link rel="stylesheet" href="giohang.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">Food Order</div>
+    <nav class="menu">
+      <a href="#">Shop</a>
+      <a href="#">Newsstand</a>
+      <a href="#">Who we are</a>
+      <a href="#">My profile</a>
+    </nav>
+    <button class="cart-btn">Giỏ Hàng (3)</button>
+  </header>
+
+  <!-- Tiêu đề -->
+  <main class="container">
+    <h1>Giỏ Hàng <span class="items">(3 items)</span></h1>
+    <div class="cart-layout">
+      
+      <!-- Danh sách sản phẩm -->
+      <section class="cart-items">
+        <div class="cart-item">
+          <img src="https://down-bs-vn.img.susercontent.com/vn-11134259-7r98o-lwi4rdci3f8be8@resize_ss280x175!@crop_w280_h175_cT" alt="Cơm gà">
+          <div class="info">
+            <h3>Cơm Gà</h3>
+            <p class="price-unit">75.000đ / SP</p>
+            <div class="qty">
+              <input type="number" value="1" min="1">
+            </div>
+          </div>
+          <div class="price">75.000đ</div>
+        </div>
+
+        <div class="cart-item">
+          <img src="https://down-zl-vn.img.susercontent.com/vn-11134513-7r98o-lsu0q1909dj890@resize_ss640x400!@crop_w640_h400_cT" alt="Bún Bò">
+          <div class="info">
+            <h3>Bún Bò</h3>
+            <p class="price-unit">40.000đ / SP</p>
+            <div class="qty">
+              <input type="number" value="1" min="1">
+            </div>
+          </div>
+          <div class="price">40.000đ</div>
+        </div>
+
+        <div class="cart-item">
+          <img src="https://down-bs-vn.img.susercontent.com/vn-11134259-7r98o-lx14mhemuehl82@resize_ss280x175!@crop_w280_h175_cT" alt="Bún Đậu">
+          <div class="info">
+            <h3>Bún Đậu</h3>
+            <p class="price-unit">70.000đ / SP</p>
+            <div class="qty">
+              <input type="number" value="2" min="1">
+            </div>
+          </div>
+          <div class="price">140.000đ</div>
+        </div>
+      </section>
+
+      <!-- Tổng cộng đơn hàng -->
+      <aside class="summary">
+        <h2>Tổng cộng đơn</h2>
+        <p>Subtotal: <span>255.000đ</span></p>
+        <p>Shipping: <span>20.000đ</span></p>
+        <p>Tax: <span>10.000đ</span></p>
+        <p class="total">Total: <span>285.000đ</span></p>
+        <button class="checkout-btn">Tiếp Tục Thanh Toán →</button>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
