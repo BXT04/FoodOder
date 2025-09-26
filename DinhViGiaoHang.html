@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Định vị giao hàng - FoodDelivery</title>
+    <title>Định vị giao hàng - FoodDelivery (OpenStreetMap)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+
     <style>
+        /* GIỮ NGUYÊN TOÀN BỘ CSS CỦA BẠN */
         * {
             margin: 0;
             padding: 0;
@@ -119,6 +125,14 @@
             position: relative;
         }
 
+        /* ĐẶT CSS CỤ THỂ CHO MAP CONTAINER THẬT */
+        #map {
+            width: 100%;
+            height: 100%;
+            /* Đảm bảo map-placeholder không làm mờ bản đồ */
+            background: none !important;
+        }
+
         .map-placeholder {
             width: 100%;
             height: 100%;
@@ -131,16 +145,12 @@
             overflow: hidden;
         }
 
-        .map-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23cbd5e0" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
-            opacity: 0.3;
+        /* CÁC THÀNH PHẦN NÀY ĐƯỢC ẨN HOẶC THAY THẾ BẰNG LEAFLET MARKER THỰC TẾ */
+        .map-overlay, .delivery-radius {
+            display: none; /* Ẩn các lớp phủ giả lập */
         }
 
+        /* Giữ lại CSS cho marker, Leaflet sẽ dùng class này cho custom marker */
         .location-marker {
             width: 50px;
             height: 50px;
@@ -180,36 +190,7 @@
             }
         }
 
-        .delivery-radius {
-            position: absolute;
-            width: 200px;
-            height: 200px;
-            border: 3px dashed #667eea;
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0.3;
-            animation: pulse 3s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0.3;
-            }
-
-            50% {
-                transform: translate(-50%, -50%) scale(1.1);
-                opacity: 0.1;
-            }
-
-            100% {
-                transform: translate(-50%, -50%) scale(1);
-                opacity: 0.3;
-            }
-        }
-
+        /* CÁC CSS KHÁC GIỮ NGUYÊN */
         .address-input-container {
             width: 100%;
             max-width: 600px;
@@ -394,11 +375,7 @@
 
     <main class="main-content">
         <div class="map-container">
-            <div class="map-placeholder">
-                <div class="map-overlay"></div>
-                <div class="delivery-radius"></div>
-                <div class="location-marker" onclick="selectMapLocation()"></div>
-            </div>
+            <div id="map"></div>
         </div>
 
         <div class="address-input-container">
@@ -437,7 +414,55 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        let currentLocation = null;
+        // Khởi tạo các biến toàn cục cho Leaflet/OSM
+        let map;
+        let marker;
+        let currentLocation = null; // { lat: number, lng: number }
+
+        // --- Hàm Khởi tạo Bản đồ Leaflet (Thay thế initializeMap) ---
+        function initializeMap() {
+            const defaultLatlng = [16.0544, 108.2022]; // Đà Nẵng, Việt Nam
+
+            // Khởi tạo bản đồ Leaflet
+            map = L.map('map', {
+                center: defaultLatlng,
+                zoom: 13,
+                zoomControl: true // Hiển thị các điều khiển zoom mặc định
+            });
+
+            // Thêm lớp bản đồ từ OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Tạo icon marker tùy chỉnh từ CSS bạn đã viết
+            const customIcon = L.divIcon({
+                className: 'location-marker',
+                iconSize: [50, 50],
+                iconAnchor: [25, 50] // Căn giữa chân marker
+            });
+
+            // Thêm marker ban đầu
+            marker = L.marker(defaultLatlng, {
+                icon: customIcon,
+                draggable: true // Cho phép kéo thả marker
+            }).addTo(map);
+
+            // Lắng nghe sự kiện kéo thả marker
+            marker.on('dragend', function (e) {
+                const latLng = e.target.getLatLng();
+                selectMapLocation({ lat: latLng.lat, lng: latLng.lng });
+            });
+
+            // Lắng nghe sự kiện click trên bản đồ
+            map.on('click', function (e) {
+                selectMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+            });
+
+            showToast('Bản đồ OpenStreetMap đã sẵn sàng!', 'info');
+        }
+
+        // --- Các hàm tiện ích (Điều chỉnh cho phù hợp với Leaflet) ---
 
         function createRipple(event, button) {
             const ripple = document.createElement('span');
@@ -452,7 +477,6 @@
             ripple.style.top = y + 'px';
 
             button.appendChild(ripple);
-
             setTimeout(() => ripple.remove(), 600);
         }
 
@@ -460,12 +484,7 @@
             const toast = document.getElementById('toast');
             toast.textContent = message;
             toast.className = 'toast show';
-
-            if (type === 'error') {
-                toast.style.background = '#ef4444';
-            } else {
-                toast.style.background = '#10b981';
-            }
+            toast.style.background = type === 'error' ? '#ef4444' : (type === 'info' ? '#3b82f6' : '#10b981');
 
             setTimeout(() => {
                 toast.className = 'toast';
@@ -479,6 +498,83 @@
             document.getElementById('locationInfo').classList.add('show');
         }
 
+        function updateMapMarker(latLng) {
+            if (marker) {
+                marker.setLatLng(latLng);
+            }
+            map.setView(latLng, map.getZoom() < 13 ? 13 : map.getZoom()); // Di chuyển bản đồ đến vị trí
+
+            // Trigger hiệu ứng bounce CSS cho marker
+            const markerElement = document.querySelector('.location-marker');
+            if (markerElement) {
+                markerElement.style.animation = 'none';
+                void markerElement.offsetWidth; // Force reflow
+                markerElement.style.animation = 'bounce 2s infinite';
+            }
+        }
+
+        // --- Hàm Tích hợp Nominatim (Reverse Geocoding: Tọa độ -> Địa chỉ) ---
+        function geocodeCoordinates(latLng) {
+            const { lat, lng } = latLng;
+            // Nominatim là dịch vụ Geocoding miễn phí của OpenStreetMap
+            const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+
+            fetch(nominatimUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.display_name) {
+                        const address = data.display_name;
+                        document.getElementById('addressInput').value = address;
+
+                        // Giả lập phí và thời gian giao
+                        const mockFee = '15.000đ';
+                        const mockTime = '25-35 phút';
+
+                        updateLocationInfo(address, mockFee, mockTime);
+                    } else {
+                        showToast('Không tìm thấy kết quả địa chỉ.', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast(`Lỗi Reverse Geocoding: ${error.message}`, 'error');
+                });
+        }
+
+        // --- Hàm Tích hợp Nominatim (Geocoding: Địa chỉ -> Tọa độ) ---
+        function geocodeAddress(address) {
+            const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+
+            showToast(`Đang tìm kiếm địa chỉ: ${address}...`, 'info');
+
+            fetch(nominatimUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+                        const latLng = { lat, lng };
+
+                        currentLocation = latLng;
+                        updateMapMarker(latLng);
+
+                        // Giả lập phí và thời gian giao
+                        const mockFee = '20.000đ';
+                        const mockTime = '30-40 phút';
+
+                        updateLocationInfo(result.display_name, mockFee, mockTime);
+                        showToast('Đã cập nhật địa chỉ giao hàng thành công!');
+                    } else {
+                        showToast(`Không tìm thấy địa chỉ: ${address}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast(`Lỗi Geocoding: ${error.message}`, 'error');
+                });
+        }
+
+        // --- Hàm xử lý sự kiện chính ---
+
         function useCurrentLocation() {
             if (!navigator.geolocation) {
                 showToast('Trình duyệt không hỗ trợ định vị GPS', 'error');
@@ -489,26 +585,15 @@
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const { latitude, longitude } = position.coords;
-                    currentLocation = { lat: latitude, lng: longitude };
+                    const latLng = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    currentLocation = latLng;
 
-                    // Giả lập reverse geocoding
-                    const mockAddress = `${Math.floor(Math.random() * 999) + 1} Đường Lê Duẩn, Phường Thạc Gián, Quận Thanh Khê, Đà Nẵng`;
-                    document.getElementById('addressInput').value = mockAddress;
-
-                    updateLocationInfo(mockAddress, '15.000đ', '25-35 phút');
-                    showToast('Đã xác định vị trí hiện tại thành công!');
-
-                    // Animate marker
-                    const marker = document.querySelector('.location-marker');
-                    marker.style.transform = 'rotate(-45deg) scale(1.2)';
-                    setTimeout(() => {
-                        marker.style.transform = 'rotate(-45deg) scale(1)';
-                    }, 300);
+                    updateMapMarker(latLng);
+                    geocodeCoordinates(latLng); // Tìm địa chỉ từ tọa độ
                 },
                 (error) => {
                     let message = 'Không thể lấy vị trí hiện tại';
-                    switch(error.code) {
+                    switch (error.code) {
                         case error.PERMISSION_DENIED:
                             message = 'Vui lòng cho phép truy cập vị trí';
                             break;
@@ -524,53 +609,47 @@
             );
         }
 
+        function selectMapLocation(latLng) {
+            currentLocation = latLng;
+            updateMapMarker(latLng);
+            geocodeCoordinates(latLng); // Tìm địa chỉ từ tọa độ
+            showToast('Đã chọn vị trí trên bản đồ!', 'success');
+        }
+
         function useMapLocation() {
-            const mockAddress = 'Trung tâm thành phố Đà Nẵng, Việt Nam';
-            document.getElementById('addressInput').value = mockAddress;
-            updateLocationInfo(mockAddress, 'Miễn phí', '15-25 phút');
-            showToast('Đã chọn vị trí trên bản đồ!');
-
-            // Animate marker
-            const marker = document.querySelector('.location-marker');
-            marker.style.transform = 'rotate(-45deg) scale(1.2)';
-            setTimeout(() => {
-                marker.style.transform = 'rotate(-45deg) scale(1)';
-            }, 300);
+            if (marker) {
+                const latLng = marker.getLatLng();
+                selectMapLocation({ lat: latLng.lat, lng: latLng.lng });
+            } else {
+                showToast('Bản đồ chưa sẵn sàng hoặc không có vị trí được đánh dấu', 'error');
+            }
         }
 
-        function selectMapLocation() {
-            useMapLocation();
-        }
 
-        function goBack() {
-            showToast('Quay lại trang trước');
-        }
+        // --- Hàm định hướng (Giữ nguyên) ---
+        function goBack() { showToast('Quay lại trang trước'); }
+        function goHome() { showToast('Về trang chủ'); }
+        function showMenu() { showToast('Mở menu'); }
 
-        function goHome() {
-            showToast('Về trang chủ');
-        }
+        // --- Event listeners ---
+        document.addEventListener('DOMContentLoaded', function () {
+            // KHỞI TẠO BẢN ĐỒ LEAFLET
+            initializeMap();
 
-        function showMenu() {
-            showToast('Mở menu');
-        }
-
-        // Event listeners
-        document.addEventListener('DOMContentLoaded', function() {
             // Add ripple effect to buttons
             document.querySelectorAll('.action-btn').forEach(button => {
-                button.addEventListener('click', function(e) {
+                button.addEventListener('click', function (e) {
                     createRipple(e, this);
                 });
             });
 
-            // Address input handler
+            // Address input handler (Geocoding - Địa chỉ thành Tọa độ)
             const addressInput = document.getElementById('addressInput');
-            addressInput.addEventListener('keypress', function(e) {
+            addressInput.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
                     const address = this.value.trim();
                     if (address) {
-                        updateLocationInfo(address, '20.000đ', '30-40 phút');
-                        showToast('Đã cập nhật địa chỉ giao hàng!');
+                        geocodeAddress(address);
                     }
                 }
             });
@@ -579,28 +658,43 @@
             const searchInput = document.querySelector('.search-input');
             const searchBtn = document.querySelector('.search-btn');
 
-            searchBtn.addEventListener('click', function() {
+            const performSearch = () => {
                 const query = searchInput.value.trim();
                 if (query) {
                     showToast(`Tìm kiếm: ${query}`);
                 }
-            });
+            };
 
-            searchInput.addEventListener('keypress', function(e) {
+            searchBtn.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
-                    const query = this.value.trim();
-                    if (query) {
-                        showToast(`Tìm kiếm: ${query}`);
-                    }
+                    performSearch();
                 }
             });
-        });
 
-        // Animate elements on load
-        setTimeout(() => {
-            document.querySelector('.map-container').style.transform = 'translateY(0)';
-            document.querySelector('.map-container').style.opacity = '1';
-        }, 100);
+            // Animate elements on load
+            const mapContainer = document.querySelector('.map-container');
+            if (mapContainer) {
+                mapContainer.style.transform = 'translateY(0)';
+                mapContainer.style.opacity = '1';
+            }
+        });
     </script>
+
+    <script>
+        // Tạo bản đồ tại vị trí Đà Nẵng
+        var map = L.map('map').setView([16.0678, 108.2208], 13);
+
+        // Thêm layer OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Thêm marker
+        var marker = L.marker([16.0678, 108.2208]).addTo(map)
+            .bindPopup('Đà Nẵng - Trung tâm thành phố')
+            .openPopup();
+    </script>
+
 </body>
 </html>
