@@ -1,15 +1,1 @@
-# FoodOder
-Đề tài làm website bán đồ ăn trực tuyến
-
-# Nội dung
-- Giới thiệu: website đặt đồ ăn trực tuyến cho người sử dụng
-- Tính năng chính:
-  + Đăng nhập
-  + Đăng ký
-  + Đặt món
-  + Thanh toán món ăn
-  + Định vị giao hàng
-  + Quản lý đơn hàng
-- Sử dụng ngôn ngữ html,css và c# để thực hiện
-
-
+<img width="1919" height="783" alt="image" src="https://github.com/user-attachments/assets/8e9aac06-8806-46d1-9563-20fb3b0659d7" />
