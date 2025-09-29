@@ -58,6 +58,7 @@
     padding:8px 12px; border-radius:6px; cursor:pointer; font-weight:600;
   }
   .btn:active{transform:translateY(1px)}
+  .btn.ghost{background:#fff;color:var(--primary)}
 
   /* Table */
   .table{width:100%; border-collapse:collapse; margin-top:16px}
@@ -87,12 +88,26 @@
     color:var(--primary); text-decoration:underline; margin-right:12px; cursor:pointer;
   }
 
+  /* Modal */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;padding:16px}
+  .modal{background:#fff;border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.2);width:min(720px,100%);max-height:90dvh;overflow:auto;border:1px solid var(--border)}
+  .modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+  .modal h3{margin:0;font-size:16px}
+  .modal .body{padding:16px}
+  .grid{display:grid;grid-template-columns: 1fr 1fr; gap:12px}
+  .field label{display:block;font-weight:600;margin-bottom:6px}
+  .field input,.field textarea,.field select{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px}
+  .field textarea{min-height:80px;resize:vertical}
+  .modal footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 16px;border-top:1px solid var(--border)}
+  .err{color:#e02222;font-size:12px;margin-top:6px}
+
   /* Responsive */
   @media (max-width: 900px){
     .app{grid-template-columns: 1fr}
     .sidebar{display:none}
     .panel{border-width:1.5px}
     .col-img{width:120px}
+    .grid{grid-template-columns: 1fr}
   }
 </style>
 </head>
@@ -115,7 +130,7 @@
       <section class="panel">
         <div class="top">
           <h1 class="title">QUẢN LÝ MÓN ĂN</h1>
-          <button class="btn" onclick="alert('Demo: Thêm mới')">+ Thêm mới</button>
+          <button class="btn" id="btnAdd">+ Thêm mới</button>
         </div>
 
         <table class="table">
@@ -131,47 +146,215 @@
               <th class="col-action">Chức năng</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>1</td>
-              <td>Gà nướng</td>
-              <td>
-                <img class="thumb" src="https://images.unsplash.com/photo-1562967914-608f82629710?q=80&w=800&auto=format&fit=crop" alt="Gà nướng">
-              </td>
-              <td>Gà nướng than hồng, da giòn vàng ruộm, thịt mềm ngọt, tẩm ướp gia vị truyền thống.</td>
-              <td>250,000 VND</td>
-              <td>Món chính</td>
-              <td><span class="status ok">Còn hàng</span></td>
-              <td class="action"><a onclick="alert('Demo: Sửa #1')">Sửa</a><a onclick="alert('Demo: Xóa #1')">Xóa</a></td>
-            </tr>
-            <tr>
-              <td>2</td>
-              <td>Gỏi tai heo</td>
-              <td>
-                <img class="thumb" src="https://upload.wikimedia.org/wikipedia/commons/9/94/Vietnamese_salad_goi.jpg" alt="Gỏi tai heo">
-              </td>
-              <td>Gỏi tai heo giòn sần sật, kết hợp cùng rau thơm, cà rốt, dưa leo và sốt chua ngọt cay nồng.</td>
-              <td>120,000 VND</td>
-              <td>Khai vị</td>
-              <td><span class="status out">Hết hàng</span></td>
-              <td class="action"><a onclick="alert('Demo: Sửa #2')">Sửa</a><a onclick="alert('Demo: Xóa #2')">Xóa</a></td>
-            </tr>
-            <tr>
-              <td>3</td>
-              <td>Trà sữa trân châu</td>
-              <td>
-                <img class="thumb" src="https://images.unsplash.com/photo-1585238342028-4bbc0a4d8fd8?q=80&w=800&auto=format&fit=crop" alt="Trà sữa">
-              </td>
-              <td>Trà sữa vị đậm, ngọt vừa, kết hợp cùng trân châu đen dẻo dai, thích hợp giải khát.</td>
-              <td>45,000 VND</td>
-              <td>Đồ uống</td>
-              <td><span class="status ok">Còn hàng</span></td>
-              <td class="action"><a onclick="alert('Demo: Sửa #3')">Sửa</a><a onclick="alert('Demo: Xóa #3')">Xóa</a></td>
-            </tr>
-          </tbody>
+          <tbody id="tbody"></tbody>
         </table>
       </section>
     </main>
   </div>
+
+  <!-- Modal Form (Add/Edit) -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal">
+      <header>
+        <h3 id="modalTitle">Thêm món</h3>
+        <button class="btn ghost" id="btnClose">Đóng</button>
+      </header>
+      <div class="body">
+        <form id="dishForm">
+          <input type="hidden" id="DishID" />
+          <div class="grid">
+            <div class="field">
+              <label for="Name">Tên món *</label>
+              <input id="Name" required />
+              <div class="err" data-err="Name"></div>
+            </div>
+            <div class="field">
+              <label for="Price">Giá (VND) *</label>
+              <input id="Price" type="number" min="0" step="1000" required />
+              <div class="err" data-err="Price"></div>
+            </div>
+            <div class="field">
+              <label for="Category">Danh mục *</label>
+              <select id="Category" required>
+                <option value="">-- Chọn --</option>
+                <option>Khai vị</option>
+                <option>Món chính</option>
+                <option>Tráng miệng</option>
+                <option>Đồ uống</option>
+              </select>
+              <div class="err" data-err="Category"></div>
+            </div>
+            <div class="field">
+              <label for="Status">Trạng thái *</label>
+              <select id="Status" required>
+                <option value="ok">Còn hàng</option>
+                <option value="out">Hết hàng</option>
+              </select>
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label for="ImageURL">Hình ảnh (URL)</label>
+              <input id="ImageURL" placeholder="https://... (có thể để trống)" />
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label for="Description">Mô tả</label>
+              <textarea id="Description" placeholder="Mô tả ngắn..."></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <footer>
+        <button class="btn ghost" id="btnReset">Làm mới</button>
+        <button class="btn" id="btnSave">Lưu</button>
+      </footer>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const tbody = document.getElementById('tbody');
+  const modal = document.getElementById('modal');
+  const btnAdd = document.getElementById('btnAdd');
+  const btnClose = document.getElementById('btnClose');
+  const btnSave = document.getElementById('btnSave');
+  const btnReset = document.getElementById('btnReset');
+  const form = document.getElementById('dishForm');
+  const modalTitle = document.getElementById('modalTitle');
+
+  const F = id => document.getElementById(id);
+  const errEl = name => document.querySelector(`[data-err="${name}"]`);
+
+  const KEY = 'qlma_dishes';
+  let dishes = load() || seed();
+  let editingId = null;
+
+  function seed(){
+    const def = [
+      {DishID:1, Name:'Gà nướng', ImageURL:'https://images.unsplash.com/photo-1562967914-608f82629710?q=80&w=800&auto=format&fit=crop', Description:'Gà nướng than hồng, da giòn vàng ruộm, thịt mềm ngọt, tẩm ướp gia vị truyền thống.', Price:250000, Category:'Món chính', Status:'ok'},
+      {DishID:2, Name:'Gỏi tai heo', ImageURL:'https://upload.wikimedia.org/wikipedia/commons/9/94/Vietnamese_salad_goi.jpg', Description:'Gỏi tai heo giòn sần sật, kết hợp cùng rau thơm, cà rốt, dưa leo và sốt chua ngọt cay nồng.', Price:120000, Category:'Khai vị', Status:'out'},
+      {DishID:3, Name:'Trà sữa trân châu', ImageURL:'https://images.unsplash.com/photo-1585238342028-4bbc0a4d8fd8?q=80&w=800&auto=format&fit=crop', Description:'Trà sữa vị đậm, ngọt vừa, kết hợp cùng trân châu đen dẻo dai, thích hợp giải khát.', Price:45000, Category:'Đồ uống', Status:'ok'}
+    ];
+    save(def);
+    return def;
+  }
+
+  function save(data){ localStorage.setItem(KEY, JSON.stringify(data)); }
+  function load(){ try{ return JSON.parse(localStorage.getItem(KEY)||'null'); }catch{ return null; } }
+
+  function nextId(){ return dishes.length ? Math.max(...dishes.map(d=>d.DishID))+1 : 1; }
+
+  function fmtPrice(v){ return new Intl.NumberFormat('vi-VN').format(v) + ' VND'; }
+
+  function render(){
+    tbody.innerHTML = '';
+    dishes.forEach(d => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${d.DishID}</td>
+        <td>${escapeHtml(d.Name)}</td>
+        <td>${d.ImageURL?`<img class="thumb" src="${escapeAttr(d.ImageURL)}" alt="${escapeAttr(d.Name)}">`:''}</td>
+        <td>${escapeHtml(d.Description||'')}</td>
+        <td>${fmtPrice(d.Price)}</td>
+        <td>${escapeHtml(d.Category||'')}</td>
+        <td><span class="status ${d.Status}">${d.Status==='ok'?'Còn hàng':'Hết hàng'}</span></td>
+        <td class="action">
+          <a data-act="edit" data-id="${d.DishID}">Sửa</a>
+          <a data-act="del" data-id="${d.DishID}">Xóa</a>
+        </td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function openModal(edit=false, data=null){
+    modal.style.display='flex';
+    modalTitle.textContent = edit ? 'Sửa món' : 'Thêm món';
+    clearErrors();
+    form.reset();
+    editingId = null;
+    if (edit && data){
+      editingId = data.DishID;
+      F('DishID').value = data.DishID;
+      F('Name').value = data.Name||'';
+      F('Price').value = data.Price||'';
+      F('Category').value = data.Category||'';
+      F('Status').value = data.Status||'ok';
+      F('ImageURL').value = data.ImageURL||'';
+      F('Description').value = data.Description||'';
+    }
+  }
+  function closeModal(){ modal.style.display='none'; }
+
+  function clearErrors(){ ['Name','Price','Category'].forEach(n=> errEl(n).textContent=''); }
+
+  function validate(){
+    clearErrors();
+    let ok=true;
+    if(!F('Name').value.trim()){ errEl('Name').textContent='Vui lòng nhập tên món'; ok=false; }
+    const p = Number(F('Price').value);
+    if(!(p>=0)){ errEl('Price').textContent='Giá không hợp lệ'; ok=false; }
+    if(!F('Category').value){ errEl('Category').textContent='Chọn danh mục'; ok=false; }
+    return ok;
+  }
+
+  function getFormData(){
+    return {
+      DishID: editingId ?? nextId(),
+      Name: F('Name').value.trim(),
+      ImageURL: F('ImageURL').value.trim(),
+      Description: F('Description').value.trim(),
+      Price: Number(F('Price').value||0),
+      Category: F('Category').value,
+      Status: F('Status').value
+    };
+  }
+
+  function onSave(){
+    if(!validate()) return;
+    const data = getFormData();
+    if(editingId){
+      dishes = dishes.map(d => d.DishID===editingId ? data : d);
+    }else{
+      dishes.push(data);
+    }
+    save(dishes);
+    render();
+    closeModal();
+  }
+
+  function onDelete(id){
+    const dish = dishes.find(d=>d.DishID===id);
+    if(!dish) return;
+    if(confirm(`Xóa món #${id} - ${dish.Name}?`)){
+      dishes = dishes.filter(d=>d.DishID!==id);
+      save(dishes);
+      render();
+    }
+  }
+
+  // Delegation for edit/delete
+  tbody.addEventListener('click', (e)=>{
+    const a = e.target.closest('a[data-act]');
+    if(!a) return;
+    const id = Number(a.getAttribute('data-id'));
+    if(a.dataset.act==='edit'){
+      const d = dishes.find(x=>x.DishID===id);
+      openModal(true,d);
+    }else if(a.dataset.act==='del'){
+      onDelete(id);
+    }
+  });
+
+  btnAdd.addEventListener('click', ()=> openModal(false));
+  btnClose.addEventListener('click', closeModal);
+  btnReset.addEventListener('click', ()=> form.reset());
+  btnSave.addEventListener('click', onSave);
+  window.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+
+  function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  function escapeAttr(s){ return escapeHtml(s).replace(/`/g,'&#96;'); }
+
+  // init
+  render();
+})();
+</script>
 </body>
 </html>
