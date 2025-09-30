@@ -1,0 +1,700 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Định vị giao hàng - FoodDelivery (OpenStreetMap)</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+
+    <style>
+        /* GIỮ NGUYÊN TOÀN BỘ CSS CỦA BẠN */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 1000;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            color: #333;
+        }
+
+            .nav-btn:hover {
+                background: rgba(0, 0, 0, 0.1);
+                transform: translateY(-1px);
+            }
+
+        .search-container {
+            flex: 1;
+            max-width: 500px;
+            margin: 0 2rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e7ff;
+            border-radius: 25px;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+            .search-input:focus {
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+        .search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #667eea;
+            border: none;
+            color: white;
+            padding: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+            .search-btn:hover {
+                background: #5a67d8;
+                transform: translateY(-50%) scale(1.05);
+            }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .map-container {
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* ĐẶT CSS CỤ THỂ CHO MAP CONTAINER THẬT */
+        #map {
+            width: 100%;
+            height: 100%;
+            /* Đảm bảo map-placeholder không làm mờ bản đồ */
+            background: none !important;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #e2e8f0, #f7fafc);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* CÁC THÀNH PHẦN NÀY ĐƯỢC ẨN HOẶC THAY THẾ BẰNG LEAFLET MARKER THỰC TẾ */
+        .map-overlay, .delivery-radius {
+            display: none; /* Ẩn các lớp phủ giả lập */
+        }
+
+        /* Giữ lại CSS cho marker, Leaflet sẽ dùng class này cho custom marker */
+        .location-marker {
+            width: 50px;
+            height: 50px;
+            background: #667eea;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            position: relative;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            z-index: 10;
+        }
+
+            .location-marker::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%) rotate(45deg);
+                width: 20px;
+                height: 20px;
+                background: white;
+                border-radius: 50%;
+            }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0) rotate(-45deg);
+            }
+
+            40% {
+                transform: translateY(-10px) rotate(-45deg);
+            }
+
+            60% {
+                transform: translateY(-5px) rotate(-45deg);
+            }
+        }
+
+        /* CÁC CSS KHÁC GIỮ NGUYÊN */
+        .address-input-container {
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .address-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            padding-left: 3rem;
+            border: 2px solid #e0e7ff;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+            .address-input:focus {
+                border-color: #667eea;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+                transform: translateY(-2px);
+            }
+
+        .address-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.3rem;
+            color: #667eea;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .use-current-location {
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4);
+        }
+
+            .use-current-location:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(251, 191, 36, 0.5);
+            }
+
+        .use-map-location {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+        }
+
+            .use-map-location:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+            }
+
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.6);
+            transform: scale(0);
+            animation: ripple-animation 0.6s linear;
+        }
+
+        @keyframes ripple-animation {
+            to {
+                transform: scale(4);
+                opacity: 0;
+            }
+        }
+
+        .location-info {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 600px;
+            margin-top: 1rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+
+            .location-info.show {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #374151;
+        }
+
+        .info-icon {
+            font-size: 1.2rem;
+            color: #667eea;
+            width: 24px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+
+            .search-container {
+                margin: 0 1rem;
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+
+            .button-container {
+                flex-direction: column;
+            }
+
+            .map-container {
+                height: 300px;
+            }
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 2000;
+        }
+
+            .toast.show {
+                transform: translateX(0);
+            }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="nav-controls">
+            <button class="nav-btn" onclick="goBack()">←</button>
+            <button class="nav-btn" onclick="goHome()">Home</button>
+            <button class="nav-btn" onclick="showMenu()">☰</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" class="search-input" placeholder="Tìm kiếm nhà hàng, món ăn...">
+            <button class="search-btn">🔍</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+
+        <div class="address-input-container">
+            <div class="address-icon">📍</div>
+            <input type="text"
+                   class="address-input"
+                   placeholder="Nhập địa chỉ giao hàng hoặc vị trí"
+                   id="addressInput">
+        </div>
+
+        <div class="button-container">
+            <button class="action-btn use-current-location" onclick="useCurrentLocation()">
+                Sử dụng vị trí hiện tại
+            </button>
+            <button class="action-btn use-map-location" onclick="useMapLocation()">
+                Sử dụng vị trí trên bản đồ
+            </button>
+        </div>
+
+        <div class="location-info" id="locationInfo">
+            <div class="info-item">
+                <span class="info-icon">📍</span>
+                <span>Vị trí: <strong id="currentAddress">Chưa xác định</strong></span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">🚚</span>
+                <span>Phí giao hàng: <strong id="deliveryFee">Miễn phí</strong></span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">⏱️</span>
+                <span>Thời gian giao: <strong id="deliveryTime">20-30 phút</strong></span>
+            </div>
+        </div>
+    </main>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Khởi tạo các biến toàn cục cho Leaflet/OSM
+        let map;
+        let marker;
+        let currentLocation = null; // { lat: number, lng: number }
+
+        // --- Hàm Khởi tạo Bản đồ Leaflet (Thay thế initializeMap) ---
+        function initializeMap() {
+            const defaultLatlng = [16.0544, 108.2022]; // Đà Nẵng, Việt Nam
+
+            // Khởi tạo bản đồ Leaflet
+            map = L.map('map', {
+                center: defaultLatlng,
+                zoom: 13,
+                zoomControl: true // Hiển thị các điều khiển zoom mặc định
+            });
+
+            // Thêm lớp bản đồ từ OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            // Tạo icon marker tùy chỉnh từ CSS bạn đã viết
+            const customIcon = L.divIcon({
+                className: 'location-marker',
+                iconSize: [50, 50],
+                iconAnchor: [25, 50] // Căn giữa chân marker
+            });
+
+            // Thêm marker ban đầu
+            marker = L.marker(defaultLatlng, {
+                icon: customIcon,
+                draggable: true // Cho phép kéo thả marker
+            }).addTo(map);
+
+            // Lắng nghe sự kiện kéo thả marker
+            marker.on('dragend', function (e) {
+                const latLng = e.target.getLatLng();
+                selectMapLocation({ lat: latLng.lat, lng: latLng.lng });
+            });
+
+            // Lắng nghe sự kiện click trên bản đồ
+            map.on('click', function (e) {
+                selectMapLocation({ lat: e.latlng.lat, lng: e.latlng.lng });
+            });
+
+            showToast('Bản đồ OpenStreetMap đã sẵn sàng!', 'info');
+        }
+
+        // --- Các hàm tiện ích (Điều chỉnh cho phù hợp với Leaflet) ---
+
+        function createRipple(event, button) {
+            const ripple = document.createElement('span');
+            const rect = button.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            const x = event.clientX - rect.left - size / 2;
+            const y = event.clientY - rect.top - size / 2;
+
+            ripple.className = 'ripple';
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = x + 'px';
+            ripple.style.top = y + 'px';
+
+            button.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show';
+            toast.style.background = type === 'error' ? '#ef4444' : (type === 'info' ? '#3b82f6' : '#10b981');
+
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        }
+
+        function updateLocationInfo(address, fee = 'Miễn phí', time = '20-30 phút') {
+            document.getElementById('currentAddress').textContent = address;
+            document.getElementById('deliveryFee').textContent = fee;
+            document.getElementById('deliveryTime').textContent = time;
+            document.getElementById('locationInfo').classList.add('show');
+        }
+
+        function updateMapMarker(latLng) {
+            if (marker) {
+                marker.setLatLng(latLng);
+            }
+            map.setView(latLng, map.getZoom() < 13 ? 13 : map.getZoom()); // Di chuyển bản đồ đến vị trí
+
+            // Trigger hiệu ứng bounce CSS cho marker
+            const markerElement = document.querySelector('.location-marker');
+            if (markerElement) {
+                markerElement.style.animation = 'none';
+                void markerElement.offsetWidth; // Force reflow
+                markerElement.style.animation = 'bounce 2s infinite';
+            }
+        }
+
+        // --- Hàm Tích hợp Nominatim (Reverse Geocoding: Tọa độ -> Địa chỉ) ---
+        function geocodeCoordinates(latLng) {
+            const { lat, lng } = latLng;
+            // Nominatim là dịch vụ Geocoding miễn phí của OpenStreetMap
+            const nominatimUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`;
+
+            fetch(nominatimUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.display_name) {
+                        const address = data.display_name;
+                        document.getElementById('addressInput').value = address;
+
+                        // Giả lập phí và thời gian giao
+                        const mockFee = '15.000đ';
+                        const mockTime = '25-35 phút';
+
+                        updateLocationInfo(address, mockFee, mockTime);
+                    } else {
+                        showToast('Không tìm thấy kết quả địa chỉ.', 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast(`Lỗi Reverse Geocoding: ${error.message}`, 'error');
+                });
+        }
+
+        // --- Hàm Tích hợp Nominatim (Geocoding: Địa chỉ -> Tọa độ) ---
+        function geocodeAddress(address) {
+            const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+
+            showToast(`Đang tìm kiếm địa chỉ: ${address}...`, 'info');
+
+            fetch(nominatimUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lng = parseFloat(result.lon);
+                        const latLng = { lat, lng };
+
+                        currentLocation = latLng;
+                        updateMapMarker(latLng);
+
+                        // Giả lập phí và thời gian giao
+                        const mockFee = '20.000đ';
+                        const mockTime = '30-40 phút';
+
+                        updateLocationInfo(result.display_name, mockFee, mockTime);
+                        showToast('Đã cập nhật địa chỉ giao hàng thành công!');
+                    } else {
+                        showToast(`Không tìm thấy địa chỉ: ${address}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    showToast(`Lỗi Geocoding: ${error.message}`, 'error');
+                });
+        }
+
+        // --- Hàm xử lý sự kiện chính ---
+
+        function useCurrentLocation() {
+            if (!navigator.geolocation) {
+                showToast('Trình duyệt không hỗ trợ định vị GPS', 'error');
+                return;
+            }
+
+            showToast('Đang lấy vị trí hiện tại...', 'info');
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const latLng = { lat: position.coords.latitude, lng: position.coords.longitude };
+                    currentLocation = latLng;
+
+                    updateMapMarker(latLng);
+                    geocodeCoordinates(latLng); // Tìm địa chỉ từ tọa độ
+                },
+                (error) => {
+                    let message = 'Không thể lấy vị trí hiện tại';
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            message = 'Vui lòng cho phép truy cập vị trí';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message = 'Thông tin vị trí không khả dụng';
+                            break;
+                        case error.TIMEOUT:
+                            message = 'Yêu cầu vị trí hết thời gian chờ';
+                            break;
+                    }
+                    showToast(message, 'error');
+                }
+            );
+        }
+
+        function selectMapLocation(latLng) {
+            currentLocation = latLng;
+            updateMapMarker(latLng);
+            geocodeCoordinates(latLng); // Tìm địa chỉ từ tọa độ
+            showToast('Đã chọn vị trí trên bản đồ!', 'success');
+        }
+
+        function useMapLocation() {
+            if (marker) {
+                const latLng = marker.getLatLng();
+                selectMapLocation({ lat: latLng.lat, lng: latLng.lng });
+            } else {
+                showToast('Bản đồ chưa sẵn sàng hoặc không có vị trí được đánh dấu', 'error');
+            }
+        }
+
+
+        // --- Hàm định hướng (Giữ nguyên) ---
+        function goBack() { showToast('Quay lại trang trước'); }
+        function goHome() { showToast('Về trang chủ'); }
+        function showMenu() { showToast('Mở menu'); }
+
+        // --- Event listeners ---
+        document.addEventListener('DOMContentLoaded', function () {
+            // KHỞI TẠO BẢN ĐỒ LEAFLET
+            initializeMap();
+
+            // Add ripple effect to buttons
+            document.querySelectorAll('.action-btn').forEach(button => {
+                button.addEventListener('click', function (e) {
+                    createRipple(e, this);
+                });
+            });
+
+            // Address input handler (Geocoding - Địa chỉ thành Tọa độ)
+            const addressInput = document.getElementById('addressInput');
+            addressInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    const address = this.value.trim();
+                    if (address) {
+                        geocodeAddress(address);
+                    }
+                }
+            });
+
+            // Search functionality
+            const searchInput = document.querySelector('.search-input');
+            const searchBtn = document.querySelector('.search-btn');
+
+            const performSearch = () => {
+                const query = searchInput.value.trim();
+                if (query) {
+                    showToast(`Tìm kiếm: ${query}`);
+                }
+            };
+
+            searchBtn.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // Animate elements on load
+            const mapContainer = document.querySelector('.map-container');
+            if (mapContainer) {
+                mapContainer.style.transform = 'translateY(0)';
+                mapContainer.style.opacity = '1';
+            }
+        });
+    </script>
+
+    <script>
+        // Tạo bản đồ tại vị trí Đà Nẵng
+        var map = L.map('map').setView([16.0678, 108.2208], 13);
+
+        // Thêm layer OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Thêm marker
+        var marker = L.marker([16.0678, 108.2208]).addTo(map)
+            .bindPopup('Đà Nẵng - Trung tâm thành phố')
+            .openPopup();
+    </script>
+
+</body>
+</html>
